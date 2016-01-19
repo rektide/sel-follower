@@ -77,7 +77,6 @@ selections.forEach(function(selection){
 	xsel.get(selection, function(err, data){
 		// initialize
 		current[selection] = data
-		console.log("initial", selection, data)
 		if(argv.i){
 			console.log(data)
 		}
