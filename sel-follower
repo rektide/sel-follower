@@ -1,0 +1,89 @@
+#!/usr/bin/env node
+
+// INGEST MODE
+
+var
+  xsel = require("xsel"),
+  yargs = require("yargs"),
+  interval = process.env.XSEL_INTERVAL || 200
+
+var argv = yargs
+	.usage("Usage: $0 [options]")
+	.option("a", {
+		alias: "all",
+		describe: "all selections (default)"
+	})
+	.option("p", {
+		alias: "primary",
+		describe: "PRIMARY selection"
+	})
+	.option("s", {
+		alias: "secondary",
+		describe: "SECONDARY selection"
+	})
+	.option("b", {
+		alias: "clipboard",
+		describe: "CLIPBOARD selection"
+	})
+	.alias("c", "clipboard")
+	.option("i", {
+		alias: "initial",
+		describe: "output initial state"
+	})
+	.alias("i", "0")
+	.help("help")
+	.argv
+
+var
+  selections= [],
+  candidates = ["p", "s", "b"]
+for(var selection of candidates){
+	if(argv[selection]){
+		selections.push(selection)
+	}
+}
+if(selections.length == 0 || yargs.a){
+	selections = candidates
+}
+for(var i in selections){
+	if(selections[i] == "b"){
+		selections[i] = "c" // npm xsel uses a nonstandard selection
+	}
+}
+
+// PREPARE POLLER
+
+var current = {}
+
+function read(selection, fn){
+	xsel.get(selection, function(err, data){
+		if(err){
+			console.error(err)
+			process.exit(1)
+		}
+		if(current[selection] == data){
+			return
+		}
+		current[selection] = data
+		if(fn){
+			fn(data)
+		}
+	})
+}
+
+// LAUNCH POLLERS
+
+selections.forEach(function(selection){
+	xsel.get(selection, function(err, data){
+		// initialize
+		current[selection] = data
+		console.log("initial", selection, data)
+		if(argv.i){
+			console.log(data)
+		}
+		// start read loop
+		setInterval(function(){
+			read(selection, console.log)
+		}, interval)
+	})
+})
